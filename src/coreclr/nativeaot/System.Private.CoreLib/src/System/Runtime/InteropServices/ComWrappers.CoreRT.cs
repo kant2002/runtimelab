@@ -163,27 +163,20 @@ namespace System.Runtime.InteropServices
 
             public uint AddRef()
             {
-                return IUnknownPtr->AddRef(_externalComObject);
+                return ((delegate* unmanaged<IntPtr, uint>)IUnknownVtbl[1])(_externalComObject);
             }
 
             public uint Release()
             {
-                return IUnknownPtr->Release(_externalComObject);
+                return ((delegate* unmanaged<IntPtr, uint>)IUnknownVtbl[2])(_externalComObject);
             }
 
-            private IUnknownVftbl* IUnknownPtr => (IUnknownVftbl*)_externalComObject;
+            private IntPtr* IUnknownVtbl => (IntPtr*)_externalComObject;
 
             ~NativeObjectWrapper()
             {
                 Release();
             }
-        }
-
-        internal unsafe struct IUnknownVftbl
-        {
-            public delegate* unmanaged<IntPtr, ref Guid, out IntPtr, int> QueryInterface;
-            public delegate* unmanaged<IntPtr, uint> AddRef;
-            public delegate* unmanaged<IntPtr, uint> Release;
         }
 
 #if false
@@ -460,14 +453,14 @@ namespace System.Runtime.InteropServices
             return s_globalInstanceForMarshalling.GetOrCreateComInterfaceForObject(instance, CreateComInterfaceFlags.None);
         }
 
-        internal static IntPtr ComObjectForInterface(IntPtr externalComObject)
+        internal static object ComObjectForInterface(IntPtr externalComObject)
         {
             if (s_globalInstanceForMarshalling == null)
             {
                 throw new InvalidOperationException(SR.InvalidOperation_ComInteropRequireComWrapperInstance);
             }
 
-            return s_globalInstanceForMarshalling.CreateObject(externalComObject, CreateComInterfaceFlags.None);
+            return s_globalInstanceForMarshalling.CreateObject(externalComObject, CreateObjectFlags.None);
         }
 
         [UnmanagedCallersOnly]
