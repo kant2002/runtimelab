@@ -18,6 +18,7 @@ namespace System.Runtime.InteropServices
         internal static Guid IID_IUnknown = new Guid(0x00000000, 0x0000, 0x0000, 0xc0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x46);
 
         private readonly ConditionalWeakTable<object, ManagedObjectWrapperHolder> _ccwTable = new ConditionalWeakTable<object, ManagedObjectWrapperHolder>();
+        private readonly ConditionalWeakTable<object, NativeObjectWrapper> _rcwTable = new ConditionalWeakTable<object, NativeObjectWrapper>();
 
         /// <summary>
         /// ABI for function dispatch of a COM interface.
@@ -148,6 +149,33 @@ namespace System.Runtime.InteropServices
                 // Release GC handle created when MOW was built.
                 _wrapper->Destroy();
                 Marshal.FreeCoTaskMem((IntPtr)_wrapper);
+            }
+        }
+
+        internal unsafe class NativeObjectWrapper
+        {
+            private IntPtr _externalComObject;
+
+            public NativeObjectWrapper(IntPtr externalComObject)
+            {
+                _externalComObject = externalComObject;
+            }
+
+            public uint AddRef()
+            {
+                return IUnknownPtr->AddRef(_externalComObject);
+            }
+
+            public uint Release()
+            {
+                return IUnknownPtr->Release(_externalComObject);
+            }
+
+            private IUnknownVftbl* IUnknownPtr => (IUnknownVftbl*)_externalComObject;
+
+            ~NativeObjectWrapper()
+            {
+                Release();
             }
         }
 
@@ -332,8 +360,31 @@ namespace System.Runtime.InteropServices
                 throw new NotImplementedException();
 
             object? wrapperMaybeLocal = wrapperMaybe;
-            retValue = null;
-            throw new NotImplementedException();
+            retValue = impl.CreateObject(externalComObject, flags);
+            if (retValue == null)
+            {
+                // If ComWrappers instance cannot create wrapper, we can do nothing here.
+                return false;
+            }
+
+            if (flags.HasFlag(CreateObjectFlags.UniqueInstance))
+            {
+                // No need to cache NativeObjectWrapper for unique instances. They are not cached.
+                return true;
+            }
+
+            NativeObjectWrapper wrapper;
+            if (impl._rcwTable.TryGetValue(retValue, out wrapper))
+            {
+                return true;
+            }
+
+            wrapper = impl._rcwTable.GetValue(retValue, (c) =>
+            {
+                return new NativeObjectWrapper(externalComObject);
+            });
+            wrapper.AddRef();
+            return true;
         }
 
         /// <summary>
@@ -407,6 +458,16 @@ namespace System.Runtime.InteropServices
             }
 
             return s_globalInstanceForMarshalling.GetOrCreateComInterfaceForObject(instance, CreateComInterfaceFlags.None);
+        }
+
+        internal static IntPtr ComObjectForInterface(IntPtr externalComObject)
+        {
+            if (s_globalInstanceForMarshalling == null)
+            {
+                throw new InvalidOperationException(SR.InvalidOperation_ComInteropRequireComWrapperInstance);
+            }
+
+            return s_globalInstanceForMarshalling.CreateObject(externalComObject, CreateComInterfaceFlags.None);
         }
 
         [UnmanagedCallersOnly]
