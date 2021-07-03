@@ -9,6 +9,7 @@
 // Forward declarations
 
 class EEType;
+class OptionalFields;
 class TypeManager;
 struct TypeManagerHandle;
 class DynamicModule;
@@ -106,6 +107,8 @@ enum EETypeField
 // Fundamental runtime type representation
 typedef DPTR(class EEType) PTR_EEType;
 typedef DPTR(PTR_EEType) PTR_PTR_EEType;
+typedef DPTR(class OptionalFields) PTR_OptionalFields;
+typedef DPTR(PTR_OptionalFields) PTR_PTR_OptionalFields;
 
 extern "C" void PopulateDebugHeaders();
 
@@ -335,6 +338,12 @@ public:
 
     uint32_t GetHashCode();
 
+    // Retrieve optional fields associated with this EEType. May be NULL if no such fields exist.
+    inline PTR_OptionalFields get_OptionalFields();
+
+    // Get flags that are less commonly set on EETypes.
+    inline uint32_t get_RareFlags();
+
     // Helper methods that deal with EEType topology (size and field layout). These are useful since as we
     // optimize for pay-for-play we increasingly want to customize exactly what goes into an EEType on a
     // per-type basis. The rules that govern this can be both complex and volatile and we risk sprinkling
@@ -356,3 +365,4 @@ public:
 
 #pragma warning(pop)
 
+#include "OptionalFields.h"

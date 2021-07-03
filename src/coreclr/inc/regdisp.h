@@ -155,7 +155,7 @@ inline TADDR GetRegdisplayStackMark(REGDISPLAY *display) {
 
 #elif defined(TARGET_64BIT)
 
-#if defined(TARGET_ARM64)
+#if defined(TARGET_ARM64) || defined(__ARM_HOST)
 typedef struct _Arm64VolatileContextPointer
 {
     union {
@@ -185,7 +185,7 @@ typedef struct _Arm64VolatileContextPointer
 } Arm64VolatileContextPointer;
 #endif //TARGET_ARM64
 struct REGDISPLAY : public REGDISPLAY_BASE {
-#ifdef TARGET_ARM64
+#ifdef TARGET_ARM64 || defined(__ARM_HOST)
     Arm64VolatileContextPointer     volatileCurrContextPointers;
 #endif
 

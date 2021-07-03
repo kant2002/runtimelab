@@ -86,6 +86,39 @@ inline PTR_UInt8 FollowRelativePointer(const int32_t* pDist)
     return result;
 }
 
+// Retrieve optional fields associated with this EEType. May be NULL if no such fields exist.
+inline PTR_OptionalFields EEType::get_OptionalFields()
+{
+    if ((m_usFlags & OptionalFieldsFlag) == 0)
+        return NULL;
+
+    uint32_t cbOptionalFieldsOffset = GetFieldOffset(ETF_OptionalFieldsPtr);
+
+#if !defined(USE_PORTABLE_HELPERS)
+    if (!IsDynamicType())
+    {
+        return (OptionalFields*)FollowRelativePointer((int32_t*)((uint8_t*)this + cbOptionalFieldsOffset));
+    }
+    else
+#endif
+    {
+        return *(OptionalFields**)((uint8_t*)this + cbOptionalFieldsOffset);
+    }
+}
+
+// Get flags that are less commonly set on EETypes.
+inline uint32_t EEType::get_RareFlags()
+{
+    OptionalFields * pOptFields = get_OptionalFields();
+
+    // If there are no optional fields then none of the rare flags have been set.
+    if (!pOptFields)
+        return 0;
+
+    // Get the flags from the optional fields. The default is zero if that particular field was not included.
+    return pOptFields->GetRareFlags(0);
+}
+
 inline TypeManagerHandle* EEType::GetTypeManagerPtr()
 {
     uint32_t cbOffset = GetFieldOffset(ETF_TypeManagerIndirection);

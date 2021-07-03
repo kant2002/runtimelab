@@ -647,7 +647,9 @@ inline uint8_t * PalNtCurrentTeb()
 // conditional compilation (upto and including defining an export of functionality that isn't a supported
 // intrinsic on that platform).
 //
-
+#if defined(HOST_ARM)
+#define __cdecl
+#endif
 EXTERN_C void * __cdecl _alloca(size_t);
 #pragma intrinsic(_alloca)
 
